@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="dashboard" options={{title: 'Dashboard'}}/>
         <Stack.Screen name="addMember" options={{title: 'AddMember'}}/>
         <Stack.Screen name="editMember" options={{title: 'EditMember'}}/>
+        <Stack.Screen name="chatInterface" options={{title: 'ChatInterface'}}/>
         <Toast/>
       </Stack>
   );

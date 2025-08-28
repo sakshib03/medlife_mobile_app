@@ -15,6 +15,7 @@ const Header = () => {
           backgroundColor: "#fe6164ff",
           padding: 10,
           justifyContent: "space-between",
+          marginTop:40
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center" }}>

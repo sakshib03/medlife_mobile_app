@@ -3,7 +3,7 @@ import { View, Text, Image } from "react-native";
 
 const Header = () => {
   return (
-    <View style={{ marginBottom: 20 }}>
+    <View style={{ marginBottom: 20 , marginTop:40}}>
       <View
         style={{
           flexDirection: "row",

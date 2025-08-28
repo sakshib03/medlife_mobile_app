@@ -129,7 +129,7 @@ const Dashboard = () => {
       const resp = await response.json();
       await AsyncStorage.setItem("currentMember", JSON.stringify(resp.member));
       router.push({
-        pathname: "/prompt",
+        pathname: "/chatInterface",
         params: { 
           member: JSON.stringify(resp.member),
           memberName: member.name 

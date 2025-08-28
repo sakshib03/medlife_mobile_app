@@ -370,11 +370,7 @@ const EditMember = () => {
               multiline
             />
             <TouchableOpacity
-              style={{
-                padding: 8,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
+              style={styles.addButton}
               onPress={() => setIsOpenOption(true)}
             >
               <Feather name="plus"e={24} color="#5a5b5aff" />

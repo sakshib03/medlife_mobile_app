@@ -38,7 +38,7 @@ const index = () => {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: "white" }}>
+    <View style={{ flex: 1, backgroundColor: "white" , marginTop:35}}>
       <View
         style={{
           flexDirection: "row",
