@@ -8,7 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
-  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -39,58 +42,211 @@ const EditMember = () => {
   });
   const [memberIndex, setMemberIndex] = useState(1);
   const [isOpenOption, setIsOpenOption] = useState(false);
-  
+  const [ocrModalVisible, setOcrModalVisible] = useState(false);
+  const [ocrData, setOcrData] = useState(null);
+  const [ocrMedicine, setOcrMedicine] = useState("");
+  const [ocrText, setOcrText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handlePrescription = () => {
     setIsOpenOption((prev) => !prev);
   };
 
-   const handleTakePhoto=async()=>{
-       try{
-         const {status} =await ImagePicker.requestCameraPermissionsAsync();
-         if(status !== "granted"){
-           alert("Sorry, we need camera permissions to make this work!");
-           return;
-         }
-         const result=await ImagePicker.launchCameraAsync({
-           allowsEditing:true,
-           aspect: [4,3],
-           quality:1,
-         });
-   
-         if(!result.canceled){
-           handleChange("prescription", result.assets[0].uri);
-         }
-       }catch (error) {
-       console.error(error);
-       Toast.show({
-         type: "error",
-         text1: "Error",
-         text2: error?.message || "Failed to open camera",
-       });
-     }
-     }
+  const uploadFile = async (uri, type) => {
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      const fileType = type === "image" ? "image/jpeg" : "application/pdf";
+      const fileName = uri.split("/").pop();
+
+      // The server expects the file field to be named "files" (plural)
+      formData.append("files", {
+        uri,
+        name: fileName,
+        type: fileType,
+      });
+
+      console.log("Uploading file to:", `${API_BASE}/ocr`);
+      console.log("File details:", { uri, fileName, fileType });
+
+      const response = await fetch(`${API_BASE}/ocr`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("Response status:", response.status);
+
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Failed to parse response as JSON:", e);
+        throw new Error("Invalid response format from server");
+      }
+
+      if (response.ok) {
+        console.log("OCR data received:", data);
+        setOcrData(data);
+        // Extract medicines array as a comma-separated string
+        const medicinesText = data.medicines ? data.medicines.join(", ") : "";
+        setOcrMedicine(medicinesText);
+        setOcrText(
+          data.sources && data.sources.length > 0 ? data.sources[0].text : ""
+        );
+        setOcrModalVisible(true);
+      } else {
+        // Handle different error response formats
+        let errorMsg = `Server error: ${response.status}`;
+
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            errorMsg = data.detail
+              .map((err) => err.msg || JSON.stringify(err))
+              .join(", ");
+          } else if (typeof data.detail === "string") {
+            errorMsg = data.detail;
+          } else if (data.detail.message) {
+            errorMsg = data.detail.message;
+          }
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+
+        console.error("Server error:", errorMsg);
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: errorMsg,
+        });
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to upload file",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        alert("Sorry, we need camera permissions to make this work!");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled) {
+        setIsOpenOption(false);
+        await uploadFile(result.assets[0].uri, "image");
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error?.message || "Failed to open camera",
+      });
+    }
+  };
 
   const handleChoosePhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled) {
-      console.log("Selected Image:", result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setIsOpenOption(false);
+        await uploadFile(result.assets[0].uri, "image");
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error?.message || "Failed to select image",
+      });
     }
-    setIsOpenOption(false);
   };
 
   const handleAddFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "*/*",
-      copyToCacheDirectory: true,
-    });
-    if (result.type === "success") {
-      console.log("Selected File:", result.uri);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      // New API (Expo SDK ≥ 48)
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        console.log("Picked file:", file);
+        setIsOpenOption(false);
+        await uploadFile(file.uri, "file");
+        return;
+      }
+
+      // Old API (fallback)
+      if (result.type === "success") {
+        console.log("Picked file:", result);
+        setIsOpenOption(false);
+        await uploadFile(result.uri, "file");
+      }
+    } catch (error) {
+      console.error("File picker error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error?.message || "Failed to select file",
+      });
     }
-    setIsOpenOption(false);
+  };
+
+  const handleAddOCRMedicine = () => {
+    // Add the OCR medicine to the prescription field
+    setFormData((prev) => ({
+      ...prev,
+      prescription: prev.prescription
+        ? `${prev.prescription}, ${ocrMedicine}`
+        : ocrMedicine,
+    }));
+    setOcrModalVisible(false);
   };
 
   useEffect(() => {
@@ -215,263 +371,348 @@ const EditMember = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}>
-      <Header />
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}>
+          <Header />
 
-      <ScrollView contentContainerStyle={{ padding: 10 }}>
-        {/* Instruction */}
-        <View style={{ marginBottom: 18 }}>
-          <Text
-            style={{
-              color: "#213e5dff",
-              fontSize: 14,
-              fontWeight: "500",
-              textAlign: "center",
-            }}
-          >
-            Update the member information below and then press UPDATE at the
-            bottom of the screen
-          </Text>
-        </View>
+          <ScrollView contentContainerStyle={{ padding: 10,
+            paddingBottom: keyboardVisible? 300 : 20
+           }}
+           keyboardShouldPersistTaps="handled"
+           >
+            {/* Instruction */}
+            <View style={{ marginBottom: 18 }}>
+              <Text
+                style={{
+                  color: "#213e5dff",
+                  fontSize: 14,
+                  fontWeight: "500",
+                  textAlign: "center",
+                }}
+              >
+                Update the member information below and then press UPDATE at the
+                bottom of the screen
+              </Text>
+            </View>
 
-        {/* Two forms side by side */}
-        <View
-          style={{ flexDirection: "column", justifyContent: "space-between" }}
-        >
-          {/* Personal Info */}
-          <View style={[styles.container, { marginBottom: 10 }]}>
-            <Text style={styles.title}>Personal Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.firstName}
-                onChangeText={(text) => handleChange("firstName", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(text) => handleChange("lastName", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>DOB</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.dob}
-                onChangeText={(text) => handleChange("dob", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Race</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.race}
-                onChangeText={(text) => handleChange("race", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gender</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.gender}
-                onChangeText={(text) => handleChange("gender", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Zip Code</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.zip_code}
-                onChangeText={(text) => handleChange("zip_code", text)}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          {/* Medical Info */}
-          <View style={[styles.container]}>
-            <Text style={styles.title}>Medical Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Height</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.height}
-                onChangeText={(text) => handleChange("height", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Weight</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.weight}
-                onChangeText={(text) => handleChange("weight", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>A1C</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.a1c}
-                onChangeText={(text) => handleChange("a1c", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Blood Pressure</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.bloodPressure}
-                onChangeText={(text) => handleChange("bloodPressure", text)}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>BMI</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.bmi}
-                onChangeText={(text) => handleChange("bmi", text)}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Prescription */}
-        <View style={{ width: "100%", marginVertical: 10 }}>
-          <Text
-            style={{ textAlign: "center", marginBottom: 5, fontWeight: "500" }}
-          >
-            Prescription
-          </Text>
-
-          <View
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              backgroundColor: "#f4f6faff",
-              borderRadius: 8,
-            }}
-          >
-            <TextInput
+            {/* Two forms side by side */}
+            <View
               style={{
-                padding: 6,
-                margin: 8,
-                borderRadius: 6,
-                minHeight: 80,
-                width: "80%",
-                textAlignVertical: "top",
+                flexDirection: "column",
+                justifyContent: "space-between",
               }}
-              value={formData.prescription}
-              onChangeText={(text) => handleChange("prescription", text)}
-              multiline
-            />
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setIsOpenOption(true)}
             >
-              <Feather name="plus"e={24} color="#5a5b5aff" />
-            </TouchableOpacity>
-          </View>
+              {/* Personal Info */}
+              <View style={[styles.container, { marginBottom: 10 }]}>
+                <Text style={styles.title}>Personal Information</Text>
 
-          <Modal
-            visible={isOpenOption}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setIsOpenOption(false)}
-          >
-            <View style={styles.modalBackground}>
-              <View style={styles.modalBox}>
-                <TouchableOpacity 
-                  style={styles.option}
-                  onPress={handleTakePhoto}
-                >
-                  <Text style={styles.optionText}>Take Photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.option}
-                  onPress={handleChoosePhoto}
-                >
-                  <Text style={styles.optionText}>Choose Photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.option} onPress={handleAddFile}>
-                  <Text style={styles.optionText}>Add File</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    { borderTopWidth: 1, borderColor: "#ddd" },
-                  ]}
-                  onPress={() => setIsOpenOption(false)}
-                >
-                  <Text style={[styles.optionText, { color: "red" }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>First Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.firstName}
+                    onChangeText={(text) => handleChange("firstName", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Last Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.lastName}
+                    onChangeText={(text) => handleChange("lastName", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>DOB</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.dob}
+                    onChangeText={(text) => handleChange("dob", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Race</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.race}
+                    onChangeText={(text) => handleChange("race", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Gender</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.gender}
+                    onChangeText={(text) => handleChange("gender", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Zip Code</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.zip_code}
+                    onChangeText={(text) => handleChange("zip_code", text)}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              {/* Medical Info */}
+              <View style={[styles.container]}>
+                <Text style={styles.title}>Medical Information</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Height</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.height}
+                    onChangeText={(text) => handleChange("height", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Weight</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.weight}
+                    onChangeText={(text) => handleChange("weight", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>A1C</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.a1c}
+                    onChangeText={(text) => handleChange("a1c", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Blood Pressure</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bloodPressure}
+                    onChangeText={(text) => handleChange("bloodPressure", text)}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>BMI</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bmi}
+                    onChangeText={(text) => handleChange("bmi", text)}
+                  />
+                </View>
               </View>
             </View>
-          </Modal>
-        </View>
 
-        {/* Buttons */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-            marginTop: 20,
-          }}
-        >
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={loading}
-            style={{
-              backgroundColor: "#3f9142",
-              paddingVertical: 12,
-              paddingHorizontal: 24,
-              borderRadius: 6,
-              marginRight: 15,
-              opacity: loading ? 0.7 : 1,
-              minWidth: 100,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={{ color: "white", fontWeight: "500" }}>Update</Text>
+            {/* Prescription */}
+            <View style={{ width: "100%", marginVertical: 10 }}>
+              <Text
+                style={{
+                  textAlign: "center",
+                  marginBottom: 5,
+                  fontWeight: "500",
+                }}
+              >
+                Prescription
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Metformin, Januvia, Aspirin, etc..."
+                  value={formData.prescription}
+                  placeholderTextColor="gray"
+                  onChangeText={(text) => handleChange("prescription", text)}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => setIsOpenOption(true)}
+                >
+                  <Feather name="plus" size={24} color="#5a5b5aff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Modal for Options */}
+              <Modal
+                visible={isOpenOption}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setIsOpenOption(false)}
+              >
+                <View style={styles.modalBackground}>
+                  <View style={styles.modalBox}>
+                    <TouchableOpacity
+                      style={styles.option}
+                      onPress={handleTakePhoto}
+                    >
+                      <Text style={styles.optionText}>Take Photo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.option}
+                      onPress={handleChoosePhoto}
+                    >
+                      <Text style={styles.optionText}>Choose Photo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.option}
+                      onPress={handleAddFile}
+                    >
+                      <Text style={styles.optionText}>Add File</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.option,
+                        { borderTopWidth: 1, borderColor: "#ddd" },
+                      ]}
+                      onPress={() => setIsOpenOption(false)}
+                    >
+                      <Text style={[styles.optionText, { color: "red" }]}>
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+
+              {/* OCR Result Modal */}
+              <Modal
+                visible={ocrModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setOcrModalVisible(false)}
+              >
+                <View style={styles.modalBackground}>
+                  <View
+                    style={[
+                      styles.modalBox,
+                      { width: "90%", maxHeight: "80%" },
+                    ]}
+                  >
+                    <Text style={styles.modalTitle}>OCR Results</Text>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Medicines</Text>
+                      <TextInput
+                        style={[styles.input, { height: 60 }]}
+                        value={ocrMedicine}
+                        onChangeText={setOcrMedicine}
+                        multiline
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Extracted Text</Text>
+                      <ScrollView style={{ maxHeight: 150 }}>
+                        <TextInput
+                          style={[styles.input, { height: 140 }]}
+                          value={ocrText}
+                          onChangeText={setOcrText}
+                          multiline
+                        />
+                      </ScrollView>
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.modalButton,
+                          { backgroundColor: "#3f9142" },
+                        ]}
+                        onPress={handleAddOCRMedicine}
+                      >
+                        <Text style={styles.modalButtonText}>Add</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.modalButton,
+                          { backgroundColor: "#e63f3fff" },
+                        ]}
+                        onPress={() => setOcrModalVisible(false)}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
+            </View>
+
+            {/* Loading Indicator */}
+            {isLoading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3f9142" />
+                <Text style={styles.loadingText}>Processing file...</Text>
+              </View>
             )}
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => router.push("/dashboard")}
-            disabled={loading}
-            style={{
-              backgroundColor: "#e63f3fff",
-              paddingVertical: 12,
-              paddingHorizontal: 24,
-              borderRadius: 6,
-              opacity: loading ? 0.7 : 1,
-              minWidth: 100,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ color: "white" }}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Buttons */}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                marginTop: 20,
+              }}
+            >
+              <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={loading}
+                style={{
+                  backgroundColor: "#3f9142",
+                  paddingVertical: 12,
+                  paddingHorizontal: 24,
+                  borderRadius: 6,
+                  marginRight: 15,
+                  opacity: loading ? 0.7 : 1,
+                  minWidth: 100,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={{ color: "white", fontWeight: "500" }}>
+                    Update
+                  </Text>
+                )}
+              </TouchableOpacity>
 
-        <View style={{ marginTop: 30 }}>
-          <Text style={{ textAlign: "center", color: "gray", fontSize: 12 }}>
-            © Vikram Sethi Contact : vikram@vikramsethi.com
-          </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/dashboard")}
+                disabled={loading}
+                style={{
+                  backgroundColor: "#e63f3fff",
+                  paddingVertical: 12,
+                  paddingHorizontal: 24,
+                  borderRadius: 6,
+                  opacity: loading ? 0.7 : 1,
+                  minWidth: 100,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "white" }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: 30 }}>
+              <Text
+                style={{ textAlign: "center", color: "gray", fontSize: 12 }}
+              >
+                © Vikram Sethi Contact : vikram@vikramsethi.com
+              </Text>
+            </View>
+          </ScrollView>
+          <Toast />
         </View>
-      </ScrollView>
-      <Toast />
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -533,10 +774,31 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     backgroundColor: "white",
-    width: "80%",
     borderRadius: 12,
-    paddingVertical: 10,
+    padding: 20,
     elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+    marginTop: 15,
+  },
+  modalButton: {
+    padding: 10,
+    borderRadius: 6,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "white",
+    fontWeight: "500",
   },
   option: {
     padding: 15,
@@ -545,6 +807,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     textAlign: "center",
+  },
+  loadingContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "white",
+    fontSize: 16,
   },
 });
 
