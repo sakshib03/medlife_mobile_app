@@ -1,10 +1,34 @@
-import React from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import React,{useState} from "react";
+import { View, Text, Image, TouchableOpacity, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Header = () => {
   const router = useRouter();
+  const [showLogoutConfirm, setShowLogoutConfirm]= useState(false);
+
+  const handleLogout=async()=>{
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to logout:",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text:"Logout",
+          onPress: async()=>{
+            await AsyncStorage.removeItem("userEmail");
+            await AsyncStorage.removeItem("currentMember");
+            router.replace("/login");
+          },
+          style: "destructive"
+        }
+      ]
+    )
+  }
 
   return (
     <View>
@@ -39,7 +63,7 @@ const Header = () => {
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: "white" }}>Logout</Text>
+          <Text style={{ color: "white" }} onPress={handleLogout}>Logout</Text>
           <Feather name="log-out" size={20} color="white" />
         </TouchableOpacity>
       </View>

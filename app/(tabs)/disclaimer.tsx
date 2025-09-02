@@ -7,17 +7,6 @@ import Header from "@/app/(tabs)/header2";
 const disclaimer = () => {
   const router = useRouter();
 
-  useEffect(() => {
-  const checkAuth = async () => {
-    const email = await AsyncStorage.getItem("userEmail");
-    if (!email) {
-      router.replace("/login");
-    }
-  };
-  
-  checkAuth();
-}, []);
-
   return (
     <View style={{ flexGrow: 1, backgroundColor: "#fff" }}>
       <Header />

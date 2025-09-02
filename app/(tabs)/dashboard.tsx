@@ -13,6 +13,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "@/app/(tabs)/header2";
+import RNHTMLtoPDF from "react-native-html-to-pdf";
+import RNPrint from "react-native-print";
 import { API_BASE } from "./config";
 
 const Dashboard = () => {
@@ -129,7 +131,7 @@ const Dashboard = () => {
       const resp = await response.json();
       await AsyncStorage.setItem("currentMember", JSON.stringify(resp.member));
       router.push({
-        pathname: "/chat",
+        pathname: "/chatInterface",
         params: { 
           member: JSON.stringify(resp.member),
           memberName: member.name 
@@ -219,15 +221,129 @@ const Dashboard = () => {
         return;
       }
 
-      // Here you would implement the PDF generation for React Native
-      // This might require a different approach than the web version
-      Alert.alert("Info", "PDF download functionality would be implemented here");
-      
+      const htmlContent = generateHTMLFromMessages(messages, item);
+      const pdfFile = await generatePDF(htmlContent, item);
+      await sharePDF(pdfFile);
+
+      Alert.alert("Success", "Chat PDF downloaded successfully!");
+
     } catch (error) {
       console.error("Error generating PDF:", error);
       Alert.alert("Error", "Error generating PDF. Please try again.");
     }
   };
+
+  const generateHTMLFromMessages = (messages, member) => {
+  const currentDate = new Date().toLocaleDateString();
+  const memberName = member
+    ? `${member.firstName} ${member.lastName}`
+    : "Unknown Member";
+
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Chat History - ${memberName}</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          padding: 30px; 
+          line-height: 1.6;
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 30px; 
+          border-bottom: 2px solid #fe786b;
+          padding-bottom: 20px;
+        }
+        .message { 
+          margin-bottom: 15px; 
+          padding: 12px; 
+          border-radius: 8px;
+          max-width: 80%;
+        }
+        .user-message { 
+          background-color: #e3f2fd; 
+          margin-left: 20%; 
+          text-align: right;
+        }
+        .ai-message { 
+          background-color: #f8f9fa; 
+          margin-right: 20%; 
+        }
+        .message-header { 
+          font-weight: bold; 
+          margin-bottom: 5px; 
+          color: #333;
+        }
+        .message-content {
+          color: #555;
+        }
+        .timestamp { 
+          font-size: 12px; 
+          color: #666; 
+          margin-top: 5px;
+        }
+        .medlife-logo {
+          text-align: center;
+          margin-bottom: 15px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="medlife-logo">
+        <h1>MedLife.AI - Chat History</h1>
+      </div>
+      <div class="header">
+        <p><strong>Generated on:</strong> ${currentDate}</p>
+        <p><strong>Member:</strong> ${memberName}</p>
+      </div>
+  `;
+  
+  messages.forEach((msg) => {
+    const messageClass = msg.sender === "user" ? "user-message" : "ai-message";
+    const senderName = msg.sender === "user" ? "You" : "Medlife.ai";
+    const messageText = msg.text
+      ? msg.text.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, "")
+      : "";
+
+    html += `
+      <div class="message ${messageClass}">
+        <div class="message-header">${senderName}</div>
+        <div class="message-content">${messageText}</div>
+      </div>
+    `;
+  });
+
+  html += `</body></html>`;
+  return html;
+};
+
+const generatePDF = async (htmlContent, member) => {
+  try {
+    const options = {
+      html: htmlContent,
+      fileName: `Chat_History_${member.firstName}_${member.lastName}`,
+      directory: "Documents",
+      base64: false,
+    };
+    const file = await RNHTMLtoPDF.convert(options);
+    return file.filePath;
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    throw error;
+  }
+};
+
+const sharePDF = async (filePath) => {
+  try {
+    await RNPrint.print({ filePath });
+  } catch (error) {
+    console.error("Print/share error:", error);
+    throw error;
+  }
+};
 
   const UserBadge = ({ name, email }) => {
     return (
@@ -242,7 +358,7 @@ const Dashboard = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}>
+    <View style={{ flex: 1, backgroundColor: "#f4f5f8ff" }}>
       <Header />
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -256,7 +372,7 @@ const Dashboard = () => {
             <Text style={[styles.cell, styles.headerText]}>Name</Text>
             <Text style={[styles.cell, styles.headerText]}>Start Chat</Text>
             <Text style={[styles.cell, styles.headerText]}>Edit</Text>
-            <Text style={[styles.cell, styles.headerText]}>PDF</Text>
+            {/* <Text style={[styles.cell, styles.headerText]}>PDF</Text> */}
             <Text style={[styles.cell, styles.headerText]}>Delete</Text>
           </View>
 
@@ -294,12 +410,12 @@ const Dashboard = () => {
                   <Feather name="edit" size={20} color="#4CAF50" />
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                   style={styles.cell}
                   onPress={() => handleDownloadPDF(item)}
                 >
                   <Feather name="download" size={20} color="#4CAF50" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity 
                   style={styles.cell}

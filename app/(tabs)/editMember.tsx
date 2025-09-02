@@ -372,11 +372,10 @@ const EditMember = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}
+      style={{ flex: 1, backgroundColor: "#ffffffff" }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}>
+        <View style={{ flex: 1, backgroundColor: "#dde6faff" }}>
           <Header />
 
           <ScrollView contentContainerStyle={{ padding: 10,
@@ -711,14 +710,13 @@ const EditMember = () => {
           </ScrollView>
           <Toast />
         </View>
-      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f4f6faff",
+    backgroundColor: "#fdfdfdff",
     width: "100%",
     borderRadius: 12,
     padding: 10,
@@ -741,7 +739,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#dededeff",
     borderRadius: 6,
     padding: 8,
     backgroundColor: "white",

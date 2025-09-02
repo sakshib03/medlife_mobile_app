@@ -396,11 +396,10 @@ const AddMember = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}
+      style={{ flex: 1, backgroundColor: "#ffffffff" }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1, backgroundColor: "#cdd4e3ff" }}>
+        <View style={{ flex: 1, backgroundColor: "#dde6faff" }}>
           <Header />
 
           <ScrollView contentContainerStyle={{ padding: 10 ,
@@ -725,7 +724,6 @@ const AddMember = () => {
             </View>
           </ScrollView>
         </View>
-      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
