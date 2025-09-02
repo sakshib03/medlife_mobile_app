@@ -18,10 +18,10 @@ const signup = () => {
   const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const [isFormValid, setIsFormValid]=useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
-  useEffect(()=>{
-    const isUsernameValid=username.trim() !== "";
+  useEffect(() => {
+    const isUsernameValid = username.trim() !== "";
     const isEmailValid = isValidEmail(email);
     const isMobileValid = isValidMobile(mobile);
 
@@ -78,12 +78,21 @@ const signup = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Signup failed");
+        // Check if the error is about existing user
+        if (response.status === 409 || data.message?.toLowerCase().includes("already exists")) {
+          throw new Error("Account already exists. Please log in.");
+        } else if (response.status === 400 && data.message) {
+          // Use the server's specific error message
+          throw new Error(data.message);
+        } else {
+          throw new Error(data.message || "Signup failed. Please try again.");
+        }
       }
 
       Toast.show({
         type: "success",
         text1: "Account created successfully!",
+        text2: "Redirecting to login...",
         position: "top",
         topOffset: 50,
         onHide: () => router.push("/login"),
@@ -91,7 +100,7 @@ const signup = () => {
     } catch (error) {
       Toast.show({
         type: "error",
-        text1: error.message || "Signup failed. Please try again.",
+        text1: error.message,
         position: "top",
         topOffset: 50,
       });
@@ -153,6 +162,7 @@ const signup = () => {
               }}
               value={username}
               onChangeText={setUsername}
+              placeholder="Enter your username"
             />
 
             <Text
@@ -177,6 +187,7 @@ const signup = () => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholder="Enter your email"
             />
 
             <Text
@@ -201,22 +212,23 @@ const signup = () => {
               onChangeText={setMobile}
               keyboardType="phone-pad"
               maxLength={10}
+              placeholder="Enter your mobile number"
             />
 
             <TouchableOpacity
               style={[
                 {
-                backgroundColor: "#9c9a9aff",
-                padding: 12,
-                borderRadius: 8,
-                alignItems: "center",
-                marginTop: 10,
-                opacity: isLoading ? 0.7 : 1,
-              },
-              isFormValid && { backgroundColor: "#f4766f"}
-            ]}
+                  backgroundColor: "#9c9a9aff",
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  marginTop: 10,
+                  opacity: isLoading ? 0.7 : 1,
+                },
+                isFormValid && { backgroundColor: "#f4766f" }
+              ]}
               onPress={handleSignUp}
-              disabled={isLoading}
+              disabled={isLoading || !isFormValid}
             >
               <Text style={{ color: "white", fontWeight: "600" }}>
                 {isLoading ? "Creating Account..." : "Sign Up"}
