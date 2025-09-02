@@ -57,6 +57,21 @@ const ChatInterface = () => {
   const [selectedAPI, setSelectedAPI] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+   useEffect(() => {
+    const loadEmail = async () => {
+      try {
+        const userEmail = await AsyncStorage.getItem("userEmail");
+        if (userEmail) {
+          setEmail(userEmail);
+        }
+      } catch (error) {
+        console.error("Error loading email:", error);
+      }
+    };
+    
+    loadEmail();
+  }, []);
+
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       "keyboardDidShow",
@@ -95,6 +110,7 @@ const ChatInterface = () => {
   // Load user email and API keys
   useEffect(() => {
     const loadUserData = async () => {
+      if (!email) return; 
       try {
         // Load existing chat history first
         const storedChatHistory = await AsyncStorage.getItem(
