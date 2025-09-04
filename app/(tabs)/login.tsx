@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
 } from "react-native";
 import Toast from "react-native-toast-message";
@@ -13,7 +12,7 @@ import Header from "@/app/(tabs)/header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "./config";
 
-const login = () => {
+const Login = () => {
   const [login, setLogin] = useState("");
   const [otp, setOtp] = useState(Array(6).fill(""));
   const router = useRouter();
@@ -24,61 +23,83 @@ const login = () => {
   const inputsRef = useRef([]);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isOtpComplete, setIsOtpComplete] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
-    // Validate the login input (could be email or phone)
-    const trimmedLogin = login.trim();
-    const isEmail = trimmedLogin.includes("@");
+    validateLoginInput();
+  }, [login]);
 
+  useEffect(() => {
+    setIsOtpComplete(otp.every(digit => digit !== "") && otp.length === 6);
+  }, [otp]);
+
+  const isValidEmail = (email) => {
+    // Check if email contains any uppercase letters
+    if (/[A-Z]/.test(email)) {
+      setLoginError("Email should not contain capital letters");
+      return false;
+    }
+    
+    // Check basic email format
+    const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+    const isValid = emailRegex.test(email);
+    
+    if (!isValid) {
+      setLoginError("Please enter a valid email address");
+    } else {
+      setLoginError("");
+    }
+    
+    return isValid;
+  };
+
+  const isValidPhone = (phone) => {
+    const isValid = /^\d{10,15}$/.test(phone);
+    
+    // if (!isValid) {
+    //   setLoginError("Please enter a valid phone number");
+    // } else {
+    //   setLoginError("");
+    // }
+    
+    return isValid;
+  };
+
+  const getLoginChannel = () => {
+    const trimmed = login.trim().toLowerCase(); // Convert to lowercase for consistency
+    const isEmail = trimmed.includes("@");
+    const type = isEmail ? "email" : "sms";
+    const identifier = isEmail ? trimmed : trimmed;
+    return { type, identifier, isEmail };
+  };
+
+  const validateLoginInput = () => {
+    const trimmedLogin = login.trim();
+    
+    if (!trimmedLogin) {
+      setIsFormValid(false);
+      setLoginError("");
+      return false;
+    }
+    
+    const isEmail = trimmedLogin.includes("@");
+    
     if (isEmail) {
       setIsFormValid(isValidEmail(trimmedLogin));
     } else {
       setIsFormValid(isValidPhone(trimmedLogin));
     }
-  }, [login]);
-
-  useEffect(() => {
-    setIsOtpComplete(otp.length === 6);
-  }, [otp]);
-
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const isValidPhone = (phone) => /^\d{10,15}$/.test(phone);
-
-  const getLoginChannel = () => {
-    const trimmed = login.trim();
-    const isEmail = trimmed.includes("@");
-    const type = isEmail ? "email" : "sms";
-    const identifier = trimmed;
-    return { type, identifier, isEmail };
+    
+    return isFormValid;
   };
 
-  const validateLoginInput = () => {
-    const { isEmail } = getLoginChannel();
-    if (!login.trim()) {
-      Toast.show({
-        type: "error",
-        text1: "Please enter your email or phone number.",
-      });
-      return false;
+  const handleLoginChange = (text) => {
+    setLogin(text);
+    
+    // Clear error when user starts typing
+    if (loginError && text) {
+      setLoginError("");
     }
-    if (isEmail) {
-      if (!isValidEmail(login)) {
-        Toast.show({
-          type: "error",
-          text1: "Please enter a valid email address.",
-        });
-        return false;
-      }
-    } else {
-      if (!isValidPhone(login)) {
-        Toast.show({
-          type: "error",
-          text1: "Please enter a valid phone number",
-        });
-        return false;
-      }
-    }
-    return true;
   };
 
   const startCountdown = (secs = 60) => {
@@ -95,13 +116,20 @@ const login = () => {
   };
 
   const handleRequestOTP = async () => {
-    if (!validateLoginInput()) return;
+    if (!validateLoginInput()) {
+      if (!login.trim()) {
+        Toast.show({
+          type: "error",
+          text1: "Please enter your email or phone number.",
+        });
+      }
+      return;
+    }
 
     const { type, identifier, isEmail } = getLoginChannel();
     setIsLoading(true);
 
     try {
-      // Replace with your actual API call
       const res = await fetch(`${API_BASE}/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,29 +137,28 @@ const login = () => {
       });
       const data = await res.json();
 
-      // Simulate API success
       if (res.ok) {
-      Toast.show({
-        type: "success",
-        text1: "OTP sent successfully!",
-      });
-      setOtpSent(true);
-      setStep(2);
-      startCountdown(60);
-    }  else {
-  if (data.detail?.includes("not found")) {
-    Toast.show({
-      type: "error",
-      text1: "Account not found. Please register first.",
-    });
-    // Optionally auto-redirect to SignUp screen:
-    // navigation.navigate("SignUp");
-  } else {
-    Toast.show({
-      type: "error",
-      text1: data.detail || "Failed to send OTP",
-    });
-  }}}catch (err) {
+        Toast.show({
+          type: "success",
+          text1: "OTP sent successfully!",
+        });
+        setOtpSent(true);
+        setStep(2);
+        startCountdown(60);
+      } else {
+        if (data.detail?.includes("not found")) {
+          Toast.show({
+            type: "error",
+            text1: "Account not found. Please register first.",
+          });
+        } else {
+          Toast.show({
+            type: "error",
+            text1: data.detail || "Failed to send OTP",
+          });
+        }
+      }
+    } catch (err) {
       Toast.show({
         type: "error",
         text1: "Network error. Please try again.",
@@ -143,7 +170,7 @@ const login = () => {
 
   const handleVerifyOTP = async () => {
     const code = otp.join("");
-    if (!otp || otp.length !== 6) {
+    if (!isOtpComplete) {
       Toast.show({
         type: "error",
         text1: "Please enter a valid 6-digit OTP",
@@ -155,7 +182,6 @@ const login = () => {
     setIsLoading(true);
 
     try {
-      // Replace with your actual API call
       const res = await fetch(`${API_BASE}/verify-login-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,19 +197,19 @@ const login = () => {
         await AsyncStorage.setItem("userEmail", identifier);
         await AsyncStorage.setItem("accessToken", data.access_token);
       
-      Toast.show({
-        type: "success",
-        text1: "Login successful!",
-        visibilityTime: 2000,
-        onHide: () => router.push("/disclaimer"),
-      });
-    } else {
-      Toast.show({
-        type: "error",
-        text1: data.detail || "OTP verification failed",
-      });
-    }
-  } catch (err) {
+        Toast.show({
+          type: "success",
+          text1: "Login successful!",
+          visibilityTime: 2000,
+          onHide: () => router.push("/disclaimer"),
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: data.detail || "OTP verification failed",
+        });
+      }
+    } catch (err) {
       Toast.show({
         type: "error",
         text1: "Network error. Please try again.",
@@ -219,10 +245,8 @@ const login = () => {
           backgroundColor: "#fff",
         }}
       >
-        {/* Header */}
         <Header />
 
-        {/* Main Container */}
         <View
           style={{
             flexDirection: "column",
@@ -230,11 +254,10 @@ const login = () => {
             paddingTop: 60,
           }}
         >
-          {/* Form */}
           <View
             style={{
               width: "85%",
-              height: 360,
+              minHeight: 360,
               borderWidth: 1,
               borderBlockColor: "#7f7e7eff",
               padding: 20,
@@ -244,7 +267,7 @@ const login = () => {
             <Text
               style={{
                 fontSize: 22,
-                fontWeight: 500,
+                fontWeight: "500",
                 marginBottom: 20,
               }}
             >
@@ -258,27 +281,31 @@ const login = () => {
                     style={{
                       color: "gray",
                       fontSize: 14,
-                      fontWeight: 400,
+                      fontWeight: "400",
                       marginBottom: 5,
                       marginTop: 20,
                     }}
                   >
-                    Mobile Number or Email
+                    Enter email address
                   </Text>
                   <TextInput
                     style={{
                       borderWidth: 1,
-                      borderColor: "#ccc",
+                      borderColor: loginError ? "red" : "#ccc",
                       borderRadius: 6,
                       padding: 10,
-                      marginBottom: 15,
+                      marginBottom: 5,
                     }}
                     value={login}
-                    onChangeText={setLogin}
-                    // keyboardType={
-                    //   login.includes("@") ? "email-address" : "phone-pad"
-                    // }
+                    onChangeText={handleLoginChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
+                  {loginError ? (
+                    <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                      {loginError}
+                    </Text>
+                  ) : null}
 
                   <TouchableOpacity
                     style={[
@@ -301,8 +328,8 @@ const login = () => {
                 </View>
               ) : (
                 <View>
-                  <Text style={{ fontSize: 14 }}>
-                    OTP sent to {login}. Please Check your{" "}
+                  <Text style={{ fontSize: 14, marginBottom: 10 }}>
+                    OTP sent to {login}. Please check your{" "}
                     {login.includes("@") ? "email" : "phone"}
                   </Text>
 
@@ -314,6 +341,7 @@ const login = () => {
                       flexDirection: "row",
                       justifyContent: "space-between",
                       marginBottom: 15,
+                      marginTop: 10,
                     }}
                   >
                     {otp.map((digit, index) => (
@@ -338,7 +366,7 @@ const login = () => {
                     ))}
                   </View>
                   {countdown > 0 && (
-                    <Text style={{ fontSize: 12, color: "gray" }}>
+                    <Text style={{ fontSize: 12, color: "gray", marginBottom: 10 }}>
                       OTP expires in {Math.floor(countdown / 60)}:
                       {(countdown % 60).toString().padStart(2, "0")}
                     </Text>
@@ -351,12 +379,12 @@ const login = () => {
                         padding: 12,
                         borderRadius: 8,
                         alignItems: "center",
-                        marginTop: 30,
+                        marginTop: 20,
                       },
                       isOtpComplete && { backgroundColor: "#f4766f" },
                     ]}
                     onPress={handleVerifyOTP}
-                    disabled={isLoading}
+                    disabled={!isOtpComplete || isLoading}
                   >
                     <Text style={{ color: "white", fontWeight: "bold" }}>
                       {isLoading ? "Verifying..." : "Verify OTP"}
@@ -366,7 +394,7 @@ const login = () => {
                   {countdown <= 0 && (
                     <TouchableOpacity
                       style={{
-                        marginTop: 4,
+                        marginTop: 15,
                         alignItems: "flex-start",
                       }}
                       onPress={handleRequestOTP}
@@ -379,7 +407,7 @@ const login = () => {
                 </View>
               )}
             </View>
-            <Text style={{ color: "gray", marginTop: 8 }}>
+            <Text style={{ color: "gray", marginTop: 20 }}>
               Don't have an account?{" "}
               <Text
                 style={{ color: "blue", textDecorationLine: "underline" }}
@@ -396,4 +424,4 @@ const login = () => {
   );
 };
 
-export default login;
+export default Login;

@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  FlatList,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -21,6 +22,8 @@ import { Feather } from "@expo/vector-icons";
 import { API_BASE } from "./config";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import Clipboard from "@react-native-clipboard/clipboard";
 
 const EditMember = () => {
   const router = useRouter();
@@ -47,9 +50,23 @@ const EditMember = () => {
   const [ocrMedicine, setOcrMedicine] = useState("");
   const [ocrText, setOcrText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
+  const showDatePicker = () => setDatePickerVisibility(true);
+  const hideDatePicker = () => setDatePickerVisibility(false);
+
+  const handleConfirm = (date) => {
+    const formattedDate = `${
+      date.getMonth() + 1
+    }/${date.getDate()}/${date.getFullYear()}`;
+    setFormData({ ...formData, dob: formattedDate });
+    hideDatePicker();
+  };
+
+  const genders = ["Male", "Female"];
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       "keyboardDidShow",
@@ -375,341 +392,399 @@ const EditMember = () => {
       style={{ flex: 1, backgroundColor: "#ffffffff" }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-        <View style={{ flex: 1, backgroundColor: "#dde6faff" }}>
-          <Header />
+      <View style={{ flex: 1, backgroundColor: "#dde6faff" }}>
+        <Header />
 
-          <ScrollView contentContainerStyle={{ padding: 10,
-            paddingBottom: keyboardVisible? 300 : 20
-           }}
-           keyboardShouldPersistTaps="handled"
-           >
-            {/* Instruction */}
-            <View style={{ marginBottom: 18 }}>
-              <Text
-                style={{
-                  color: "#213e5dff",
-                  fontSize: 14,
-                  fontWeight: "500",
-                  textAlign: "center",
-                }}
-              >
-                Update the member information below and then press UPDATE at the
-                bottom of the screen
-              </Text>
-            </View>
-
-            {/* Two forms side by side */}
-            <View
+        <ScrollView
+          contentContainerStyle={{
+            padding: 10,
+            paddingBottom: keyboardVisible ? 300 : 20,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Instruction */}
+          <View style={{ marginBottom: 18 }}>
+            <Text
               style={{
-                flexDirection: "column",
-                justifyContent: "space-between",
+                color: "#213e5dff",
+                fontSize: 14,
+                fontWeight: "500",
+                textAlign: "center",
               }}
             >
-              {/* Personal Info */}
-              <View style={[styles.container, { marginBottom: 10 }]}>
-                <Text style={styles.title}>Personal Information</Text>
+              Update the member information below and then press UPDATE at the
+              bottom of the screen
+            </Text>
+          </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>First Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.firstName}
-                    onChangeText={(text) => handleChange("firstName", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Last Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.lastName}
-                    onChangeText={(text) => handleChange("lastName", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>DOB</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dob}
-                    onChangeText={(text) => handleChange("dob", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Race</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.race}
-                    onChangeText={(text) => handleChange("race", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Gender</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.gender}
-                    onChangeText={(text) => handleChange("gender", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Zip Code</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.zip_code}
-                    onChangeText={(text) => handleChange("zip_code", text)}
-                    keyboardType="numeric"
-                  />
-                </View>
+          {/* Two forms side by side */}
+          <View
+            style={{
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            {/* Personal Info */}
+            <View style={[styles.container, { marginBottom: 10 }]}>
+              <Text style={styles.title}>Personal Information</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>First Name<Text style={{color: 'red'}}>*</Text></Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.firstName}
+                  onChangeText={(text) => handleChange("firstName", text)}
+                />
               </View>
-
-              {/* Medical Info */}
-              <View style={[styles.container]}>
-                <Text style={styles.title}>Medical Information</Text>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Height</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.height}
-                    onChangeText={(text) => handleChange("height", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Weight</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.weight}
-                    onChangeText={(text) => handleChange("weight", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>A1C</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.a1c}
-                    onChangeText={(text) => handleChange("a1c", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Blood Pressure</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.bloodPressure}
-                    onChangeText={(text) => handleChange("bloodPressure", text)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>BMI</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.bmi}
-                    onChangeText={(text) => handleChange("bmi", text)}
-                  />
-                </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Last Name<Text style={{color: 'red'}}>*</Text></Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.lastName}
+                  onChangeText={(text) => handleChange("lastName", text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>DOB<Text style={{color: 'red'}}>*</Text></Text>
+                <TouchableOpacity onPress={showDatePicker} style={styles.input}>
+                  <Text style={{ color: formData.dob ? "black" : "gray" }}>
+                    {formData.dob || "MM/DD/YYYY"}
+                  </Text>
+                </TouchableOpacity>
+                <DateTimePickerModal
+                  isVisible={isDatePickerVisible}
+                  mode="date"
+                  onConfirm={handleConfirm}
+                  onCancel={hideDatePicker}
+                  maximumDate={new Date()}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Race<Text style={{color: 'red'}}>*</Text></Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.race}
+                  onChangeText={(text) => handleChange("race", text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Gender<Text style={{color: 'red'}}>*</Text></Text>
+                <TouchableOpacity
+                  style={styles.input}
+                  onPress={() => setOpen(!open)}
+                >
+                  <Text style={{ color: formData.gender ? "black" : "gray" }}>
+                    {formData.gender || "Select Gender"}
+                  </Text>
+                </TouchableOpacity>
+                {open && (
+                  <View style={styles.dropdown}>
+                    <FlatList
+                      data={genders}
+                      keyExtractor={(item) => item}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            handleChange("gender", item);
+                            setOpen(false);
+                          }}
+                        >
+                          <Text>{item}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </View>
+                )}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Zip Code<Text style={{color: 'red'}}>*</Text></Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.zip_code}
+                  onChangeText={(text) => handleChange("zip_code", text)}
+                  keyboardType="numeric"
+                />
               </View>
             </View>
 
-            {/* Prescription */}
-            <View style={{ width: "100%", marginVertical: 10 }}>
-              <Text
-                style={{
-                  textAlign: "center",
-                  marginBottom: 5,
-                  fontWeight: "500",
-                }}
-              >
-                Prescription
-              </Text>
+            {/* Medical Info */}
+            <View style={[styles.container]}>
+              <Text style={styles.title}>Medical Information</Text>
 
-              <View style={styles.inputContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Height</Text>
                 <TextInput
-                  style={styles.textInput}
-                  placeholder="Metformin, Januvia, Aspirin, etc..."
-                  value={formData.prescription}
-                  placeholderTextColor="gray"
-                  onChangeText={(text) => handleChange("prescription", text)}
-                  multiline
+                  style={styles.input}
+                  value={formData.height}
+                  onChangeText={(text) => handleChange("height", text)}
                 />
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => setIsOpenOption(true)}
-                >
-                  <Feather name="plus" size={24} color="#5a5b5aff" />
-                </TouchableOpacity>
               </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Weight</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.weight}
+                  onChangeText={(text) => handleChange("weight", text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>A1C</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.a1c}
+                  onChangeText={(text) => handleChange("a1c", text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Blood Pressure</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.bloodPressure}
+                  onChangeText={(text) => handleChange("bloodPressure", text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>BMI</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.bmi}
+                  onChangeText={(text) => handleChange("bmi", text)}
+                />
+              </View>
+            </View>
+          </View>
 
-              {/* Modal for Options */}
-              <Modal
-                visible={isOpenOption}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setIsOpenOption(false)}
-              >
-                <View style={styles.modalBackground}>
-                  <View style={styles.modalBox}>
-                    <TouchableOpacity
-                      style={styles.option}
-                      onPress={handleTakePhoto}
-                    >
-                      <Text style={styles.optionText}>Take Photo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.option}
-                      onPress={handleChoosePhoto}
-                    >
-                      <Text style={styles.optionText}>Choose Photo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.option}
-                      onPress={handleAddFile}
-                    >
-                      <Text style={styles.optionText}>Add File</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.option,
-                        { borderTopWidth: 1, borderColor: "#ddd" },
-                      ]}
-                      onPress={() => setIsOpenOption(false)}
-                    >
-                      <Text style={[styles.optionText, { color: "red" }]}>
-                        Cancel
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
+          {/* Prescription */}
+          <View style={{ width: "100%", marginVertical: 10 }}>
+            <Text
+              style={{
+                textAlign: "center",
+                marginBottom: 5,
+                fontWeight: "500",
+              }}
+            >
+              Prescription
+            </Text>
 
-              {/* OCR Result Modal */}
-              <Modal
-                visible={ocrModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setOcrModalVisible(false)}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Metformin, Januvia, Aspirin, etc..."
+                value={formData.prescription}
+                placeholderTextColor="gray"
+                onChangeText={(text) => handleChange("prescription", text)}
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setIsOpenOption(true)}
               >
-                <View style={styles.modalBackground}>
-                  <View
-                    style={[
-                      styles.modalBox,
-                      { width: "90%", maxHeight: "80%" },
-                    ]}
+                <Feather name="plus" size={24} color="#5a5b5aff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal for Options */}
+            <Modal
+              visible={isOpenOption}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setIsOpenOption(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalBox}>
+                  <TouchableOpacity
+                    style={styles.option}
+                    onPress={handleTakePhoto}
                   >
-                    <Text style={styles.modalTitle}>OCR Results</Text>
+                    <Text style={styles.optionText}>Take Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.option}
+                    onPress={handleChoosePhoto}
+                  >
+                    <Text style={styles.optionText}>Choose Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.option}
+                    onPress={handleAddFile}
+                  >
+                    <Text style={styles.optionText}>Add File</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.option,
+                      { borderTopWidth: 1, borderColor: "#ddd" },
+                    ]}
+                    onPress={() => setIsOpenOption(false)}
+                  >
+                    <Text style={[styles.optionText, { color: "red" }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
 
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Medicines</Text>
+            {/* OCR Result Modal */}
+            <Modal
+              visible={ocrModalVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setOcrModalVisible(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View
+                  style={[styles.modalBox, { width: "90%", maxHeight: "90%" }]}
+                >
+                  <Text style={styles.modalTitle}>OCR Results</Text>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Medicines</Text>
+                    <TextInput
+                      style={[styles.input, { height: 70 }]}
+                      value={ocrMedicine}
+                      onChangeText={setOcrMedicine}
+                      multiline
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={styles.label}>Extracted Text</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Clipboard.setString(ocrText);
+                        }}
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                        }}
+                      >
+                        <Feather name="copy" size={20} color="#555656ff" />
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView style={{ maxHeight: 150 }}>
                       <TextInput
-                        style={[styles.input, { height: 60 }]}
-                        value={ocrMedicine}
-                        onChangeText={setOcrMedicine}
+                        style={[styles.input, { height: 140 }]}
+                        value={ocrText}
+                        onChangeText={setOcrText}
                         multiline
                       />
-                    </View>
+                    </ScrollView>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        marginTop: 10,
+                        marginBottom: 10,
+                        textAlign: "left",
+                        color: "#fc7878ff",
+                      }}
+                    >
+                      Note: You can copy text from "Extracted Text" and paste it
+                      into Medicines. (This will be added to your prescription)
+                    </Text>
+                  </View>
 
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Extracted Text</Text>
-                      <ScrollView style={{ maxHeight: 150 }}>
-                        <TextInput
-                          style={[styles.input, { height: 140 }]}
-                          value={ocrText}
-                          onChangeText={setOcrText}
-                          multiline
-                        />
-                      </ScrollView>
-                    </View>
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalButton,
+                        { backgroundColor: "#3f9142" },
+                      ]}
+                      onPress={handleAddOCRMedicine}
+                    >
+                      <Text style={styles.modalButtonText}>Add</Text>
+                    </TouchableOpacity>
 
-                    <View style={styles.modalButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.modalButton,
-                          { backgroundColor: "#3f9142" },
-                        ]}
-                        onPress={handleAddOCRMedicine}
-                      >
-                        <Text style={styles.modalButtonText}>Add</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.modalButton,
-                          { backgroundColor: "#e63f3fff" },
-                        ]}
-                        onPress={() => setOcrModalVisible(false)}
-                      >
-                        <Text style={styles.modalButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalButton,
+                        { backgroundColor: "#e63f3fff" },
+                      ]}
+                      onPress={() => setOcrModalVisible(false)}
+                    >
+                      <Text style={styles.modalButtonText}>Cancel</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </Modal>
-            </View>
-
-            {/* Loading Indicator */}
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3f9142" />
-                <Text style={styles.loadingText}>Processing file...</Text>
               </View>
-            )}
+            </Modal>
+          </View>
 
-            {/* Buttons */}
-            <View
+          {/* Loading Indicator */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3f9142" />
+              <Text style={styles.loadingText}>Processing file...</Text>
+            </View>
+          )}
+
+          {/* Buttons */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              marginTop: 20,
+            }}
+          >
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={loading}
               style={{
-                flexDirection: "row",
+                backgroundColor: "#3f9142",
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                borderRadius: 6,
+                marginRight: 15,
+                opacity: loading ? 0.7 : 1,
+                minWidth: 100,
+                alignItems: "center",
                 justifyContent: "center",
-                marginTop: 20,
               }}
             >
-              <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={loading}
-                style={{
-                  backgroundColor: "#3f9142",
-                  paddingVertical: 12,
-                  paddingHorizontal: 24,
-                  borderRadius: 6,
-                  marginRight: 15,
-                  opacity: loading ? 0.7 : 1,
-                  minWidth: 100,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {loading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={{ color: "white", fontWeight: "500" }}>
-                    Update
-                  </Text>
-                )}
-              </TouchableOpacity>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={{ color: "white", fontWeight: "500" }}>
+                  Update
+                </Text>
+              )}
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => router.push("/dashboard")}
-                disabled={loading}
-                style={{
-                  backgroundColor: "#e63f3fff",
-                  paddingVertical: 12,
-                  paddingHorizontal: 24,
-                  borderRadius: 6,
-                  opacity: loading ? 0.7 : 1,
-                  minWidth: 100,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: "white" }}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/dashboard")}
+              disabled={loading}
+              style={{
+                backgroundColor: "#e63f3fff",
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                borderRadius: 6,
+                opacity: loading ? 0.7 : 1,
+                minWidth: 100,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ color: "white" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
 
-            <View style={{ marginTop: 30 }}>
-              <Text
-                style={{ textAlign: "center", color: "gray", fontSize: 12 }}
-              >
-                © Vikram Sethi Contact : vikram@vikramsethi.com
-              </Text>
-            </View>
-          </ScrollView>
-          <Toast />
-        </View>
+          <View style={{ marginTop: 30 }}>
+            <Text style={{ textAlign: "center", color: "gray", fontSize: 12 }}>
+              © Vikram Sethi Contact : vikram@vikramsethi.com
+            </Text>
+          </View>
+        </ScrollView>
+        <Toast />
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -821,6 +896,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "white",
     fontSize: 16,
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    marginTop: 5,
+    backgroundColor: "#f9f9faff",
+  },
+  dropdownItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
 });
 
