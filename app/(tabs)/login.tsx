@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import Header from "@/app/(tabs)/header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "./config";
+import {useAuth} from '../context/AuthContext';
 
 const Login = () => {
   const [login, setLogin] = useState("");
@@ -201,7 +202,7 @@ const Login = () => {
           type: "success",
           text1: "Login successful!",
           visibilityTime: 2000,
-          onHide: () => router.push("/disclaimer"),
+          onHide: () => router.replace("/disclaimer"),
         });
       } else {
         Toast.show({
