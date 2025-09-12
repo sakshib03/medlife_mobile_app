@@ -11,10 +11,11 @@ import { useRouter } from "expo-router";
 import Header from "@/app/(tabs)/header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "./config";
-import {useAuth} from '../context/AuthContext';
+import { Feather } from "@expo/vector-icons";
 
 const Login = () => {
   const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState(Array(6).fill(""));
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -25,49 +26,46 @@ const Login = () => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [isOtpComplete, setIsOtpComplete] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [secure, setSecure] = useState(true);
 
   useEffect(() => {
     validateLoginInput();
-  }, [login]);
+  }, [login, password]);
 
   useEffect(() => {
-    setIsOtpComplete(otp.every(digit => digit !== "") && otp.length === 6);
+    setIsOtpComplete(otp.every((digit) => digit !== "") && otp.length === 6);
   }, [otp]);
 
   const isValidEmail = (email) => {
-    // Check if email contains any uppercase letters
+    if (!email) return false;
+    
+    // Check for uppercase letters
     if (/[A-Z]/.test(email)) {
       setLoginError("Email should not contain capital letters");
       return false;
     }
-    
+
     // Check basic email format
     const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
     const isValid = emailRegex.test(email);
-    
+
     if (!isValid) {
       setLoginError("Please enter a valid email address");
     } else {
       setLoginError("");
     }
-    
+
     return isValid;
   };
 
   const isValidPhone = (phone) => {
     const isValid = /^\d{10,15}$/.test(phone);
-    
-    // if (!isValid) {
-    //   setLoginError("Please enter a valid phone number");
-    // } else {
-    //   setLoginError("");
-    // }
-    
     return isValid;
   };
 
   const getLoginChannel = () => {
-    const trimmed = login.trim().toLowerCase(); // Convert to lowercase for consistency
+    const trimmed = login.trim().toLowerCase();
     const isEmail = trimmed.includes("@");
     const type = isEmail ? "email" : "sms";
     const identifier = isEmail ? trimmed : trimmed;
@@ -76,31 +74,47 @@ const Login = () => {
 
   const validateLoginInput = () => {
     const trimmedLogin = login.trim();
-    
-    if (!trimmedLogin) {
+    const trimmedPassword = password.trim();
+
+    if (!trimmedLogin || !trimmedPassword) {
       setIsFormValid(false);
-      setLoginError("");
       return false;
     }
-    
+
     const isEmail = trimmedLogin.includes("@");
-    
+    let isValidLogin = false;
+
     if (isEmail) {
-      setIsFormValid(isValidEmail(trimmedLogin));
+      isValidLogin = isValidEmail(trimmedLogin);
     } else {
-      setIsFormValid(isValidPhone(trimmedLogin));
+      isValidLogin = isValidPhone(trimmedLogin);
+      if (!isValidLogin) {
+        setLoginError("Please enter a valid phone number");
+      } else {
+        setLoginError("");
+      }
     }
+
+    const isValidPassword = trimmedPassword.length >= 6;
     
-    return isFormValid;
+    if (!isValidPassword) {
+      setPasswordError("Password must be at least 6 characters");
+    } else {
+      setPasswordError("");
+    }
+
+    setIsFormValid(isValidLogin && isValidPassword);
+    return isValidLogin && isValidPassword;
   };
 
   const handleLoginChange = (text) => {
     setLogin(text);
-    
-    // Clear error when user starts typing
-    if (loginError && text) {
-      setLoginError("");
-    }
+    if (loginError) setLoginError("");
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    if (passwordError) setPasswordError("");
   };
 
   const startCountdown = (secs = 60) => {
@@ -123,19 +137,30 @@ const Login = () => {
           type: "error",
           text1: "Please enter your email or phone number.",
         });
+      } else if (!password.trim()) {
+        Toast.show({
+          type: "error",
+          text1: "Please enter your password.",
+        });
       }
       return;
     }
 
-    const { type, identifier, isEmail } = getLoginChannel();
+    const { type, identifier } = getLoginChannel();
     setIsLoading(true);
 
     try {
+      // Verify credentials and request OTP in a single API call
       const res = await fetch(`${API_BASE}/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, identifier }),
+        body: JSON.stringify({ 
+          type, 
+          identifier: identifier.toLowerCase(), 
+          password 
+        }),
       });
+      
       const data = await res.json();
 
       if (res.ok) {
@@ -147,15 +172,20 @@ const Login = () => {
         setStep(2);
         startCountdown(60);
       } else {
-        if (data.detail?.includes("not found")) {
+        if (res.status === 404) {
           Toast.show({
             type: "error",
-            text1: "Account not found. Please register first.",
+            text1: "Account not found. Please sign up first.",
+          });
+        } else if (res.status === 401) {
+          Toast.show({
+            type: "error",
+            text1: "Invalid password. Please try again.",
           });
         } else {
           Toast.show({
             type: "error",
-            text1: data.detail || "Failed to send OTP",
+            text1: data.detail || data.message || "Failed to send OTP",
           });
         }
       }
@@ -188,16 +218,19 @@ const Login = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type,
-          identifier,
+          identifier: identifier.toLowerCase(),
           otp_code: code,
         }),
       });
       const data = await res.json();
 
       if (res.ok) {
+        const loginTime = new Date().getTime();
+        await AsyncStorage.setItem("loginTime", loginTime.toString());
         await AsyncStorage.setItem("userEmail", identifier);
         await AsyncStorage.setItem("accessToken", data.access_token);
-      
+        await AsyncStorage.setItem("isLoggedIn", "true");
+
         Toast.show({
           type: "success",
           text1: "Login successful!",
@@ -207,7 +240,7 @@ const Login = () => {
       } else {
         Toast.show({
           type: "error",
-          text1: data.detail || "OTP verification failed",
+          text1: data.detail || data.message || "OTP verification failed",
         });
       }
     } catch (err) {
@@ -282,12 +315,12 @@ const Login = () => {
                     style={{
                       color: "gray",
                       fontSize: 14,
-                      fontWeight: "400",
+                      fontWeight: "500",
                       marginBottom: 5,
                       marginTop: 20,
                     }}
                   >
-                    Enter email address
+                    Email Address
                   </Text>
                   <TextInput
                     style={{
@@ -301,10 +334,57 @@ const Login = () => {
                     onChangeText={handleLoginChange}
                     autoCapitalize="none"
                     autoCorrect={false}
+                    placeholder="Enter your email or phone number"
                   />
                   {loginError ? (
-                    <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
                       {loginError}
+                    </Text>
+                  ) : null}
+
+                  <Text
+                    style={{
+                      color: "gray",
+                      fontSize: 14,
+                      fontWeight: "500",
+                      marginBottom: 5,
+                      marginTop: 20,
+                    }}
+                  >
+                    Password
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: passwordError ? "red" : "#ccc",
+                      borderRadius: 6,
+                      paddingHorizontal: 10,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        color: "black"
+                      }}
+                      value={password}
+                      onChangeText={handlePasswordChange}
+                      secureTextEntry={secure}
+                      autoCapitalize="none"
+                      placeholder="Enter your password"
+                    />
+                    <TouchableOpacity onPress={() => setSecure(!secure)}>
+                      <Feather name={secure ? "eye-off" : "eye"} size={16} color="gray" />
+                    </TouchableOpacity>
+                  </View>
+                  {passwordError ? (
+                    <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                      {passwordError}
                     </Text>
                   ) : null}
 
@@ -315,7 +395,7 @@ const Login = () => {
                         padding: 12,
                         borderRadius: 8,
                         alignItems: "center",
-                        marginTop: 10,
+                        marginTop: 20,
                       },
                       isFormValid && { backgroundColor: "#f4766f" },
                     ]}
@@ -323,7 +403,7 @@ const Login = () => {
                     disabled={!isFormValid || isLoading}
                   >
                     <Text style={{ color: "white", fontWeight: "600" }}>
-                      {isLoading ? "Sending..." : "Request OTP"}
+                      {isLoading ? "Verifying..." : "Request OTP"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -367,7 +447,9 @@ const Login = () => {
                     ))}
                   </View>
                   {countdown > 0 && (
-                    <Text style={{ fontSize: 12, color: "gray", marginBottom: 10 }}>
+                    <Text
+                      style={{ fontSize: 12, color: "gray", marginBottom: 10 }}
+                    >
                       OTP expires in {Math.floor(countdown / 60)}:
                       {(countdown % 60).toString().padStart(2, "0")}
                     </Text>

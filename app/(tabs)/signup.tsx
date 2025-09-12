@@ -10,77 +10,119 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import Header from "@/app/(tabs)/header";
 import { API_BASE } from "./config";
+import { Feather } from "@expo/vector-icons";
 
 const Signup = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [isFormValid, setIsFormValid] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [mobileError, setMobileError] = useState("");
+  const [secure, setSecure] = useState(true);
 
   useEffect(() => {
     validateForm();
-  }, [username, email, mobile]);
+  }, [username, email, password, mobile]);
 
   const validateForm = () => {
     const isUsernameValid = username.trim() !== "";
     const isEmailValid = isValidEmail(email);
+    const isPasswordValid = isValidPassword(password);
     const isMobileValid = isValidMobile(mobile);
 
-    setIsFormValid(isUsernameValid && isEmailValid && isMobileValid);
+    setIsFormValid(isUsernameValid && isEmailValid && isPasswordValid && isMobileValid);
   };
 
   const isValidEmail = (email) => {
     if (!email) return false;
-    
+
     // Check for uppercase letters
     if (/[A-Z]/.test(email)) {
       setEmailError("Email should not contain capital letters");
       return false;
     }
-    
+
     // Check basic email format
     const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
     const isValid = emailRegex.test(email);
-    
+
     if (!isValid) {
       setEmailError("Please enter a valid email address");
     } else {
       setEmailError("");
     }
-    
+
     return isValid;
+  };
+
+  const isValidPassword = (password) => {
+    if (!password) return false;
+    
+    // Password validation rules
+    const hasMinLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    let errorMessage = "";
+    
+    if (!hasMinLength) {
+      errorMessage = "Password must be at least 8 characters long";
+    } else if (!hasUpperCase) {
+      errorMessage = "Password must contain at least one uppercase letter";
+    } else if (!hasLowerCase) {
+      errorMessage = "Password must contain at least one lowercase letter";
+    } else if (!hasNumber) {
+      errorMessage = "Password must contain at least one number";
+    } else if (!hasSpecialChar) {
+      errorMessage = "Password must contain at least one special character";
+    }
+    
+    setPasswordError(errorMessage);
+    return errorMessage === "";
   };
 
   const isValidMobile = (mobile) => {
     if (!mobile) return false;
-    
+
     const isValid = /^\d{10,15}$/.test(mobile);
-    
+
     if (!isValid) {
       setMobileError("Please enter a valid 10-digit mobile number");
     } else {
       setMobileError("");
     }
-    
+
     return isValid;
   };
 
   const handleEmailChange = (text) => {
     setEmail(text);
-    
+
     // Clear error when user starts typing
     if (emailError && text) {
       setEmailError("");
     }
   };
 
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+
+    // Clear error when user starts typing
+    if (passwordError && text) {
+      setPasswordError("");
+    }
+  };
+
   const handleMobileChange = (text) => {
     setMobile(text);
-    
+
     // Clear error when user starts typing
     if (mobileError && text) {
       setMobileError("");
@@ -110,6 +152,17 @@ const Signup = () => {
       return;
     }
 
+    if (!isValidPassword(password)) {
+      // Error message is already set by isValidPassword function
+      Toast.show({
+        type: "error",
+        text1: passwordError || "Please enter a valid password",
+        position: "top",
+        topOffset: 50,
+      });
+      return;
+    }
+
     if (!isValidMobile(mobile)) {
       // Error message is already set by isValidMobile function
       Toast.show({
@@ -129,7 +182,8 @@ const Signup = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
-          email: email.toLowerCase(), // Ensure email is in lowercase
+          email: email.toLowerCase(), 
+          password,
           mobile,
         }),
       });
@@ -138,7 +192,10 @@ const Signup = () => {
 
       if (!response.ok) {
         // Check if the error is about existing user
-        if (response.status === 409 || data.message?.toLowerCase().includes("already exists")) {
+        if (
+          response.status === 409 ||
+          data.message?.toLowerCase().includes("already exists")
+        ) {
           throw new Error("Account already exists. Please log in.");
         } else if (response.status === 400 && data.message) {
           // Use the server's specific error message
@@ -209,7 +266,7 @@ const Signup = () => {
                 marginBottom: 5,
               }}
             >
-              Username<Text style={{color: 'red'}}>*</Text>
+              Username<Text style={{ color: "red" }}>*</Text>
             </Text>
             <TextInput
               style={{
@@ -231,7 +288,7 @@ const Signup = () => {
                 marginBottom: 5,
               }}
             >
-              Email address<Text style={{color: 'red'}}>*</Text>
+              Email address<Text style={{ color: "red" }}>*</Text>
             </Text>
             <TextInput
               style={{
@@ -257,11 +314,59 @@ const Signup = () => {
               style={{
                 color: "gray",
                 fontSize: 14,
+                fontWeight: "500",
+                marginBottom: 5,
+                marginTop: 10,
+              }}
+            >
+              Password<Text style={{ color: "red" }}>*</Text>
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: passwordError ? "red" : "#ccc",
+                borderRadius: 6,
+                paddingHorizontal: 10,
+                marginBottom: 5,
+              }}
+            >
+              <TextInput
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  color: "black",
+                }}
+                value={password}
+                onChangeText={handlePasswordChange}
+                secureTextEntry={secure}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setSecure(!secure)}>
+                <Feather
+                  name={secure ? "eye-off" : "eye"}
+                  size={16}
+                  color="gray"
+                />
+              </TouchableOpacity>
+            </View>
+            {passwordError ? (
+              <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                {passwordError}
+              </Text>
+            ) : null}
+
+            <Text
+              style={{
+                color: "gray",
+                fontSize: 14,
+                marginTop:10,
                 marginBottom: 5,
                 fontWeight: "500",
               }}
             >
-              Mobile Number<Text style={{color: 'red'}}>*</Text>
+              Mobile Number<Text style={{ color: "red" }}>*</Text>
             </Text>
             <TextInput
               style={{
@@ -292,7 +397,7 @@ const Signup = () => {
                   marginTop: 10,
                   opacity: isLoading ? 0.7 : 1,
                 },
-                isFormValid && { backgroundColor: "#f4766f" }
+                isFormValid && { backgroundColor: "#f4766f" },
               ]}
               onPress={handleSignUp}
               disabled={isLoading || !isFormValid}

@@ -20,8 +20,13 @@ const Header = () => {
         {
           text:"Logout",
           onPress: async()=>{
-            await AsyncStorage.removeItem("userEmail");
-            await AsyncStorage.removeItem("currentMember");
+            await AsyncStorage.multiRemove([
+            "userEmail", 
+            "accessToken", 
+            "isLoggedIn",
+            "currentMember"
+          ]);
+            router.dismissAll();
             router.replace("/login");
           },
           style: "destructive"

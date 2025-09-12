@@ -98,7 +98,7 @@ const EditMember = () => {
       const fileName = uri.split("/").pop();
 
       // The server expects the file field to be named "files" (plural)
-      formData.append("files", {
+      formData.append("file", {
         uri,
         name: fileName,
         type: fileType,
@@ -134,9 +134,7 @@ const EditMember = () => {
         // Extract medicines array as a comma-separated string
         const medicinesText = data.medicines ? data.medicines.join(", ") : "";
         setOcrMedicine(medicinesText);
-        setOcrText(
-          data.sources && data.sources.length > 0 ? data.sources[0].text : ""
-        );
+        setOcrText(data.full_text || '');
         setOcrModalVisible(true);
       } else {
         // Handle different error response formats
@@ -185,7 +183,7 @@ const EditMember = () => {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.7,
+        quality: 0.6,
       });
 
       if (!result.canceled) {
@@ -206,7 +204,7 @@ const EditMember = () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+        quality: 0.6,
       });
 
       if (!result.canceled) {
@@ -605,12 +603,12 @@ const EditMember = () => {
                   >
                     <Text style={styles.optionText}>Choose Photo</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.option}
                     onPress={handleAddFile}
                   >
                     <Text style={styles.optionText}>Add File</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                   <TouchableOpacity
                     style={[
                       styles.option,

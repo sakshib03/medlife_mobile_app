@@ -809,6 +809,8 @@ const ChatInterface = () => {
           await AsyncStorage.removeItem("userEmail");
           await AsyncStorage.removeItem(keyFor("selectedAPI"));
           await AsyncStorage.removeItem(keyFor("currentMember"));
+
+          router.dismissAll();
           router.replace("/login");
         },
         style: "destructive",

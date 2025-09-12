@@ -58,6 +58,7 @@ const Dashboard = () => {
     const checkAuth = async () => {
       const email = await AsyncStorage.getItem("userEmail");
       if (!email) {
+        router.dismissAll();
         router.replace("/login");
         return;
       }

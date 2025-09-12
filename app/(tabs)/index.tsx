@@ -1,15 +1,15 @@
-import React, { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  Pressable,
-  ImageBackground,
-} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import {
+  Image,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const index = () => {
   const ScrollViewRef = useRef(null);
@@ -519,19 +519,18 @@ const index = () => {
                 style={{
                   backgroundColor: "#eb3e41ff",
                   alignItems: "center",
-                  height: 30,
+                  height: 40,
                   width: 130,
                   marginTop: 24,
                   padding: 10,
-                  paddingBottom: 14,
                   borderRadius: 8,
+                  marginBottom:20
                 }}
               >
                 <Text
                   style={{
                     color: "white",
-                    fontWeight: "600",
-                    paddingBottom: 10,
+                    fontWeight: "500",
                   }}
                 >
                   Try Our AI Bot -
