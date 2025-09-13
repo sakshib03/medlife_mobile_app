@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "medlife_app",
-    "slug": "medlife_app",
+    "name": "Medlife",
+    "slug": "Medlife",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.sakshi01.medlife_app"
+      "package": "com.sakshi01.medlife"
     },
     "web": {
       "bundler": "metro",

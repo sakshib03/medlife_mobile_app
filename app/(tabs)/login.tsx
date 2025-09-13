@@ -39,7 +39,7 @@ const Login = () => {
 
   const isValidEmail = (email) => {
     if (!email) return false;
-    
+
     // Check for uppercase letters
     if (/[A-Z]/.test(email)) {
       setLoginError("Email should not contain capital letters");
@@ -89,14 +89,14 @@ const Login = () => {
     } else {
       isValidLogin = isValidPhone(trimmedLogin);
       if (!isValidLogin) {
-        setLoginError("Please enter a valid phone number");
+        setLoginError("Please enter a valid email");
       } else {
         setLoginError("");
       }
     }
 
     const isValidPassword = trimmedPassword.length >= 6;
-    
+
     if (!isValidPassword) {
       setPasswordError("Password must be at least 6 characters");
     } else {
@@ -154,13 +154,13 @@ const Login = () => {
       const res = await fetch(`${API_BASE}/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          type, 
-          identifier: identifier.toLowerCase(), 
-          password 
+        body: JSON.stringify({
+          type,
+          identifier: identifier.toLowerCase(),
+          password,
         }),
       });
-      
+
       const data = await res.json();
 
       if (res.ok) {
@@ -334,7 +334,6 @@ const Login = () => {
                     onChangeText={handleLoginChange}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    placeholder="Enter your email or phone number"
                   />
                   {loginError ? (
                     <Text
@@ -370,23 +369,39 @@ const Login = () => {
                       style={{
                         flex: 1,
                         paddingVertical: 10,
-                        color: "black"
+                        color: "black",
                       }}
                       value={password}
                       onChangeText={handlePasswordChange}
                       secureTextEntry={secure}
                       autoCapitalize="none"
-                      placeholder="Enter your password"
                     />
                     <TouchableOpacity onPress={() => setSecure(!secure)}>
-                      <Feather name={secure ? "eye-off" : "eye"} size={16} color="gray" />
+                      <Feather
+                        name={secure ? "eye-off" : "eye"}
+                        size={16}
+                        color="gray"
+                      />
                     </TouchableOpacity>
                   </View>
                   {passwordError ? (
-                    <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
                       {passwordError}
                     </Text>
                   ) : null}
+
+                  <Text
+                    style={{
+                      color: "blue",
+                      textDecorationLine: "underline",
+                      fontSize: 12,
+                    }}
+                    onPress={() => router.push("/resetPassword")}
+                  >
+                    Forgot Password?
+                  </Text>
 
                   <TouchableOpacity
                     style={[
