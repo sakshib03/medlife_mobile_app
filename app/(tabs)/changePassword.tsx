@@ -110,8 +110,6 @@ const changePassword = () => {
 
         // Clear stored email
         await AsyncStorage.removeItem("resetEmail");
-
-        // Navigate to login page after a short delay
         setTimeout(() => {
           router.push("/login");
         }, 1500);

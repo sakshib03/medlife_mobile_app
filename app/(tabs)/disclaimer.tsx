@@ -1,11 +1,30 @@
 import React, { useEffect } from "react";
-import { View, Text, Image, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  BackHandler,
+  TouchableOpacity,
+} from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "@/app/(tabs)/header2";
 
 const disclaimer = () => {
   const router = useRouter();
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        // Prevent going back
+        return true;
+      }
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   return (
     <View style={{ flexGrow: 1, backgroundColor: "#fff" }}>
@@ -35,7 +54,10 @@ const disclaimer = () => {
         </Text>
         <View style={{ flexDirection: "row", gap: 20, marginTop: 30 }}>
           <TouchableOpacity
-            onPress={() => router.push("/dashboard")}
+            onPress={() => {
+              router.dismissAll();
+              router.replace("/dashboard");
+            }}
             style={{
               backgroundColor: "#3f9142",
               paddingVertical: 8,

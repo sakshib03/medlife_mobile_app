@@ -20,7 +20,7 @@ const AuthCheck = () => {
 
       const isTokenValid =
         loginTime &&
-        new Date().getTime() - parseInt(loginTime) < 7 * 24 * 60 * 60 * 1000;
+        new Date().getTime() - parseInt(loginTime) < 15 * 24 * 60 * 60 * 1000;
 
       if (isLoggedIn === "true" && accessToken && isTokenValid) {
         router.replace("/dashboard");
