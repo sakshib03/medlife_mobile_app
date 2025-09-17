@@ -144,7 +144,7 @@ const AddMember = () => {
         // Extract medicines array as a comma-separated string
         const medicinesText = data.medicines ? data.medicines.join(", ") : "";
         setOcrMedicine(medicinesText);
-        setOcrText(data.full_text || '');
+        // setOcrText(data.full_text || '');
         setOcrModalVisible(true);
       } else {
         // Handle different error response formats
@@ -750,7 +750,7 @@ const AddMember = () => {
                     />
                   </View>
 
-                  <View style={styles.inputGroup}>
+                  {/* <View style={styles.inputGroup}>
                     <View
                       style={{
                         flexDirection: "row",
@@ -793,7 +793,7 @@ const AddMember = () => {
                       Note: You can copy text from "Extracted Text" and paste it
                       into Medicines. (This will be added to your prescription)
                     </Text>
-                  </View>
+                  </View> */}
 
                   <View style={styles.modalButtons}>
                     <TouchableOpacity

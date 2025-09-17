@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
@@ -13,22 +15,26 @@ import Header from "@/app/(tabs)/header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "./config";
 import { Feather } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const changePassword = () => {
   const router = useRouter();
   const [securePassword, setSecurePassword] = useState(true);
   const [secureConfirmPassword, setSecureConfirmPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
   const [errors, setErrors] = useState({
     email: "",
     otp: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [formData, setFormData] = useState({
     email: "",
     otp_code: "",
     new_password: "",
+    confirm_password: "",
   });
 
   useEffect(() => {
@@ -51,6 +57,7 @@ const changePassword = () => {
       email: "",
       otp: "",
       password: "",
+      confirmPassword: "",
     };
 
     if (!formData.email) {
@@ -74,6 +81,14 @@ const changePassword = () => {
       valid = false;
     } else if (formData.new_password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
+      valid = false;
+    }
+
+    if (!formData.confirm_password) {
+      newErrors.confirmPassword = "New Confirm Password is required";
+      valid = false;
+    } else if (formData.new_password !== formData.confirm_password) {
+      newErrors.confirmPassword = "Passwords do not match";
       valid = false;
     }
 
@@ -143,198 +158,258 @@ const changePassword = () => {
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          backgroundColor: "#fff",
-        }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <Header />
-
-        <View
-          style={{
-            flexDirection: "column",
-            alignItems: "center",
-            paddingTop: 60,
-          }}
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, backgroundColor: "#fff" }}
+          enableOnAndroid={true}
+          extraScrollHeight={20} // adds little space when keyboard opens
+          keyboardShouldPersistTaps="handled"
         >
+          <Header />
+
           <View
             style={{
-              width: "85%",
-              minHeight: 360,
-              borderWidth: 1,
-              borderBlockColor: "#7f7e7eff",
-              padding: 20,
-              borderRadius: 8,
+              flexDirection: "column",
+              alignItems: "center",
+              paddingTop: 60,
             }}
           >
-            <Text
+            <View
               style={{
-                fontSize: 22,
-                fontWeight: "500",
-                marginBottom: 20,
+                width: "85%",
+                minHeight: 360,
+                borderWidth: 1,
+                borderBlockColor: "#7f7e7eff",
+                padding: 20,
+                borderRadius: 8,
               }}
             >
-              Change Password
-            </Text>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: "500",
+                  marginBottom: 20,
+                }}
+              >
+                Change Password
+              </Text>
 
-            <View>
               <View>
-                <Text
-                  style={{
-                    color: "gray",
-                    fontSize: 14,
-                    fontWeight: "500",
-                    marginBottom: 5,
-                    marginTop: 20,
-                  }}
-                >
-                  Email Address
-                </Text>
-                <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderRadius: 6,
-                    borderColor: errors.email ? "red" : "#ccc",
-                    color: "black",
-                    padding: 10,
-                    marginBottom: 5,
-                  }}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={formData.email}
-                  onChangeText={(text) => handleInputChange("email", text)}
-                  editable={false}
-                />
-                {errors.email ? (
+                <View>
                   <Text
-                    style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    style={{
+                      color: "gray",
+                      fontSize: 14,
+                      fontWeight: "500",
+                      marginBottom: 5,
+                      marginTop: 20,
+                    }}
                   >
-                    {errors.email}
+                    Email Address
                   </Text>
-                ) : null}
-
-                <Text
-                  style={{
-                    color: "gray",
-                    fontSize: 14,
-                    fontWeight: "500",
-                    marginBottom: 5,
-                    marginTop: 20,
-                  }}
-                >
-                  Enter OTP
-                </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: errors.otp ? "red" : "#ccc",
-                    borderRadius: 6,
-                    paddingHorizontal: 10,
-                    marginBottom: 5,
-                  }}
-                >
                   <TextInput
                     style={{
-                      flex: 1,
-                      paddingVertical: 10,
+                      borderWidth: 1,
+                      borderRadius: 6,
+                      borderColor: errors.email ? "red" : "#ccc",
                       color: "black",
+                      padding: 10,
+                      marginBottom: 5,
                     }}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    keyboardType="number-pad"
-                    value={formData.otp_code}
-                    onChangeText={(text) => handleInputChange("otp_code", text)}
-                    maxLength={6}
+                    value={formData.email}
+                    onChangeText={(text) => handleInputChange("email", text)}
+                    editable={false}
                   />
-                </View>
-                {errors.otp ? (
-                  <Text
-                    style={{ color: "red", fontSize: 12, marginBottom: 10 }}
-                  >
-                    {errors.otp}
-                  </Text>
-                ) : null}
+                  {errors.email ? (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
+                      {errors.email}
+                    </Text>
+                  ) : null}
 
-                <Text
-                  style={{
-                    color: "gray",
-                    fontSize: 14,
-                    fontWeight: "500",
-                    marginBottom: 5,
-                    marginTop: 20,
-                  }}
-                >
-                  New Password
-                </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: errors.password ? "red" : "#ccc",
-                    borderRadius: 6,
-                    paddingHorizontal: 10,
-                    marginBottom: 5,
-                  }}
-                >
-                  <TextInput
+                  <Text
                     style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      color: "black",
+                      color: "gray",
+                      fontSize: 14,
+                      fontWeight: "500",
+                      marginBottom: 5,
+                      marginTop: 20,
                     }}
-                    secureTextEntry={securePassword}
-                    autoCapitalize="none"
-                    value={formData.new_password}
-                    onChangeText={(text) => handleInputChange("new_password", text)}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setSecurePassword(!securePassword)}
                   >
-                    <Feather
-                      name={securePassword ? "eye-off" : "eye"}
-                      size={16}
-                      color="gray"
+                    Enter OTP
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: errors.otp ? "red" : "#ccc",
+                      borderRadius: 6,
+                      paddingHorizontal: 10,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        color: "black",
+                      }}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="number-pad"
+                      value={formData.otp_code}
+                      onChangeText={(text) =>
+                        handleInputChange("otp_code", text)
+                      }
+                      maxLength={6}
                     />
+                  </View>
+                  {errors.otp ? (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
+                      {errors.otp}
+                    </Text>
+                  ) : null}
+
+                  <Text
+                    style={{
+                      color: "gray",
+                      fontSize: 14,
+                      fontWeight: "500",
+                      marginBottom: 5,
+                      marginTop: 20,
+                    }}
+                  >
+                    New Password
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: errors.password ? "red" : "#ccc",
+                      borderRadius: 6,
+                      paddingHorizontal: 10,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        color: "black",
+                      }}
+                      secureTextEntry={securePassword}
+                      autoCapitalize="none"
+                      value={formData.new_password}
+                      onChangeText={(text) =>
+                        handleInputChange("new_password", text)
+                      }
+                    />
+                    <TouchableOpacity
+                      onPress={() => setSecurePassword(!securePassword)}
+                    >
+                      <Feather
+                        name={securePassword ? "eye-off" : "eye"}
+                        size={16}
+                        color="gray"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password ? (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
+                      {errors.password}
+                    </Text>
+                  ) : null}
+
+                  <Text
+                    style={{
+                      color: "gray",
+                      fontSize: 14,
+                      fontWeight: "500",
+                      marginBottom: 5,
+                      marginTop: 20,
+                    }}
+                  >
+                    New Password (Confirm)
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: errors.confirmPassword ? "red" : "#ccc",
+                      borderRadius: 6,
+                      paddingHorizontal: 10,
+                      marginBottom: 5,
+                    }}
+                  >
+                    <TextInput
+                      style={{ flex: 1, paddingVertical: 10, color: "black" }}
+                      secureTextEntry={secureConfirmPassword}
+                      autoCapitalize="none"
+                      value={formData.confirm_password}
+                      onChangeText={(text) =>
+                        handleInputChange("confirm_password", text)
+                      }
+                    />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setSecureConfirmPassword(!secureConfirmPassword)
+                      }
+                    >
+                      <Feather
+                        name={secureConfirmPassword ? "eye-off" : "eye"}
+                        size={16}
+                        color="gray"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.confirmPassword ? (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 10 }}
+                    >
+                      {errors.confirmPassword}
+                    </Text>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: "#9c9a9aff",
+                      padding: 12,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      marginTop: 20,
+                      maxWidth: 200,
+                      justifyContent: "center",
+                    }}
+                    onPress={handleChangePassword}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text style={{ color: "white", fontWeight: "bold" }}>
+                        Change Password
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-                {errors.password ? (
-                  <Text
-                    style={{ color: "red", fontSize: 12, marginBottom: 10 }}
-                  >
-                    {errors.password}
-                  </Text>
-                ) : null}
-
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: "#9c9a9aff",
-                    padding: 12,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    marginTop: 20,
-                    maxWidth: 200,
-                    justifyContent: "center",
-                  }}
-                  onPress={handleChangePassword}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="white" />
-                  ) : (
-                    <Text style={{ color: "white", fontWeight: "bold" }}>
-                      Change Password
-                    </Text>
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </KeyboardAwareScrollView>
+      </KeyboardAvoidingView>
       <Toast />
     </>
   );

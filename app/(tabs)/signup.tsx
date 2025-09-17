@@ -5,37 +5,44 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import Header from "@/app/(tabs)/header";
 import { API_BASE } from "./config";
 import { Feather } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const Signup = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [isFormValid, setIsFormValid] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [mobileError, setMobileError] = useState("");
   const [secure, setSecure] = useState(true);
+  const [secureConfirm, setSecureConfirm] = useState(true);
 
   useEffect(() => {
     validateForm();
-  }, [username, email, password, mobile]);
+  }, [username, email, password, confirmPassword, mobile]);
 
   const validateForm = () => {
     const isUsernameValid = username.trim() !== "";
     const isEmailValid = isValidEmail(email);
     const isPasswordValid = isValidPassword(password);
+    const isConfirmPasswordValid = validateConfirmPassword();
     const isMobileValid = isValidMobile(mobile);
 
-    setIsFormValid(isUsernameValid && isEmailValid && isPasswordValid && isMobileValid);
+    setIsFormValid(isUsernameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid && isMobileValid);
   };
 
   const isValidEmail = (email) => {
@@ -88,6 +95,17 @@ const Signup = () => {
     return errorMessage === "";
   };
 
+  const validateConfirmPassword = () =>{
+    if(!confirmPassword) return false;
+
+    if(password !== confirmPassword){
+      setConfirmPasswordError("Passwords do not match");
+      return false;
+    }
+    setConfirmPasswordError("");
+    return true;
+  }
+
   const isValidMobile = (mobile) => {
     if (!mobile) return false;
 
@@ -118,6 +136,11 @@ const Signup = () => {
     if (passwordError && text) {
       setPasswordError("");
     }
+  };
+
+  const handleConfirmPasswordChange = (text) => {
+    setConfirmPassword(text);
+    if (confirmPasswordError && text) setConfirmPasswordError("");
   };
 
   const handleMobileChange = (text) => {
@@ -157,6 +180,16 @@ const Signup = () => {
       Toast.show({
         type: "error",
         text1: passwordError || "Please enter a valid password",
+        position: "top",
+        topOffset: 50,
+      });
+      return;
+    }
+
+    if (!validateConfirmPassword()) {
+      Toast.show({
+        type: "error",
+        text1: confirmPasswordError || "Passwords do not match",
         position: "top",
         topOffset: 50,
       });
@@ -227,12 +260,16 @@ const Signup = () => {
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          backgroundColor: "#fff",
-        }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, backgroundColor: "#fff" }}
+          enableOnAndroid={true}
+          extraScrollHeight={20} // adds little space when keyboard opens
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Header */}
         <Header />
 
@@ -241,7 +278,7 @@ const Signup = () => {
           style={{
             flexDirection: "column",
             alignItems: "center",
-            paddingTop: 60,
+            paddingTop: 30,
           }}
         >
           {/* Form */}
@@ -357,6 +394,55 @@ const Signup = () => {
               </Text>
             ) : null}
 
+
+            {/* Confirm Password */}
+            <Text
+              style={{
+                color: "gray",
+                fontSize: 14,
+                fontWeight: "500",
+                marginTop: 10,
+              }}
+            >
+              Confirm Password<Text style={{ color: "red" }}>*</Text>
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: confirmPasswordError ? "red" : "#ccc",
+                borderRadius: 6,
+                paddingHorizontal: 10,
+                marginBottom: 5,
+              }}
+            >
+              <TextInput
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  color: "black",
+                }}
+                value={confirmPassword}
+                onChangeText={handleConfirmPasswordChange}
+                secureTextEntry={secureConfirm}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setSecureConfirm(!secureConfirm)}>
+                <Feather
+                  name={secureConfirm ? "eye-off" : "eye"}
+                  size={16}
+                  color="gray"
+                />
+              </TouchableOpacity>
+            </View>
+            {confirmPasswordError ? (
+              <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+                {confirmPasswordError}
+              </Text>
+            ) : null}
+
+
             <Text
               style={{
                 color: "gray",
@@ -418,7 +504,8 @@ const Signup = () => {
             </Text>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+      </KeyboardAvoidingView>
       <Toast />
     </>
   );

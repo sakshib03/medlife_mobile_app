@@ -98,7 +98,7 @@ const Login = () => {
     const isValidPassword = trimmedPassword.length >= 6;
 
     if (!isValidPassword) {
-      setPasswordError("Password must be at least 6 characters");
+      setPasswordError("Password must be at least 8 characters");
     } else {
       setPasswordError("");
     }
