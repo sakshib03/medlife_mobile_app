@@ -57,7 +57,7 @@ const ChatInterface = () => {
   const [selectedAPI, setSelectedAPI] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-   useEffect(() => {
+  useEffect(() => {
     const loadEmail = async () => {
       try {
         const userEmail = await AsyncStorage.getItem("userEmail");
@@ -68,7 +68,7 @@ const ChatInterface = () => {
         console.error("Error loading email:", error);
       }
     };
-    
+
     loadEmail();
   }, []);
 
@@ -110,7 +110,7 @@ const ChatInterface = () => {
   // Load user email and API keys
   useEffect(() => {
     const loadUserData = async () => {
-      if (!email) return; 
+      if (!email) return;
       try {
         // Load existing chat history first
         const storedChatHistory = await AsyncStorage.getItem(
@@ -1022,6 +1022,11 @@ const ChatInterface = () => {
 
           <View style={styles.mainContent}>
             <View style={styles.chatHeader}>
+              
+              <TouchableOpacity onPress={()=>router.push("/dashboard")}>
+                <Feather name="arrow-left" size={20} marginBottom={8} color="#0a0a0aff" />
+              </TouchableOpacity>
+              
               <View>
                 <Text style={styles.chatTitle}>Medlife Assist</Text>
                 <Text style={styles.chatSubtitle}>
@@ -1060,44 +1065,86 @@ const ChatInterface = () => {
                       />
                       <View style={styles.dropdown}>
                         {data.length > 0 ? (
-                          data.map((member) => (
-                            <TouchableOpacity
-                              key={`${member.firstName}-${member.lastName}-${member.memberIndex}`}
-                              style={[
-                                styles.dropdownItem,
-                                selectedMember &&
+                          <>
+                            {data.map((member) => (
+                              <TouchableOpacity
+                                key={`${member.firstName}-${member.lastName}-${member.memberIndex}`}
+                                style={[
+                                  styles.dropdownItem,
+                                  selectedMember &&
+                                    selectedMember.firstName ===
+                                      member.firstName &&
+                                    selectedMember.lastName ===
+                                      member.lastName &&
+                                    styles.dropdownItemSelected,
+                                ]}
+                                onPress={() => {
+                                  setSelectedMember(member);
+                                  setShowMemberDropdown(false);
+                                  AsyncStorage.setItem(
+                                    keyFor("currentMember"),
+                                    JSON.stringify(member)
+                                  );
+                                }}
+                              >
+                                <Text
+                                  style={styles.dropdownItemText}
+                                  numberOfLines={1}
+                                >
+                                  {`${member.firstName} ${member.lastName}`.trim()}
+                                </Text>
+                                {selectedMember &&
                                   selectedMember.firstName ===
                                     member.firstName &&
-                                  selectedMember.lastName === member.lastName &&
-                                  styles.dropdownItemSelected,
-                              ]}
-                              onPress={() => {
-                                setSelectedMember(member);
-                                setShowMemberDropdown(false);
-                                // Save selected member to storage
-                                AsyncStorage.setItem(
-                                  keyFor("currentMember"),
-                                  JSON.stringify(member)
-                                );
-                              }}
-                            >
-                              <Text
-                                style={styles.dropdownItemText}
-                                numberOfLines={1}
+                                  selectedMember.lastName ===
+                                    member.lastName && (
+                                    <Feather
+                                      name="check"
+                                      size={16}
+                                      color="#007bff"
+                                    />
+                                  )}
+                              </TouchableOpacity>
+                            ))}
+
+                            {data.length < 4 && (
+                              <TouchableOpacity
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                  setShowMemberDropdown(false);
+                                  router.push("/addMember");
+                                  console.log("Add new member clicked");
+                                }}
                               >
-                                {`${member.firstName} ${member.lastName}`.trim()}
-                              </Text>
-                              {selectedMember &&
-                                selectedMember.firstName === member.firstName &&
-                                selectedMember.lastName === member.lastName && (
+                                <View
+                                  style={{
+                                    color: "#fe786b",
+                                    borderColor: "#fe786b",
+                                    padding: 8,
+                                    borderWidth: 2,
+                                    display: "flex",
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemText,
+                                      { width: 110 , color: "#fe786b",},
+                                    ]}
+                                  >
+                                    Add Member
+                                  </Text>
                                   <Feather
-                                    name="check"
+                                    name="plus"
                                     size={16}
+                                    marginLeft={4}
                                     color="#007bff"
                                   />
-                                )}
-                            </TouchableOpacity>
-                          ))
+                                </View>
+                              </TouchableOpacity>
+                            )}
+                          </>
                         ) : (
                           <View style={styles.dropdownItem}>
                             <Text style={styles.dropdownItemText}>
@@ -1377,7 +1424,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    marginTop: 40,
+    marginTop: 30,
   },
   header: {
     flexDirection: "row",

@@ -93,6 +93,7 @@ const Dashboard = () => {
           }))
           .filter((m) => m.firstName);
         setData(members);
+
       } else {
         console.error("Failed to fetch members:", result.detail);
         setData([]);
